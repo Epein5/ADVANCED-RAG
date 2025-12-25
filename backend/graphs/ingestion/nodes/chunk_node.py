@@ -83,6 +83,5 @@ def chunk_node(state: RagIngestState) -> RagIngestState:
     # Update state
     state["chunks"] = chunks
     state["total_chunks"] = len(chunks)
-    print(state)
-
+    
     return state
