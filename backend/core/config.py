@@ -19,6 +19,11 @@ class Config(BaseSettings):
     min_chunk_size: int = 500
     max_chunk_size: int = 2000
 
+    # Weaviate configuration
+    weaviate_host: str = "localhost"
+    weaviate_port: int = 8080
+    weaviate_collection_name: str = "Chunk"
+
     # @property
     # def db_url(self):
     #     return f"sqlite:///./{self.db_name}"

@@ -37,7 +37,7 @@ def _update_chunk_with_result(chunk: dict, result: ChunkResponse) -> None:
     chunk['context'] = result.context
     chunk['chunk_type'] = result.chunk_type
     chunk['breadcrumbs'] = [result.breadcrumb]
-    chunk['contexulized_chunk'] = f"{result.context}\n\n{chunk['content']}"
+    chunk['contextualized_chunk'] = f"{result.context}\n\n{chunk['content']}"
 
 
 def _delete_cache_safely(client: genai.Client, cache_name: str) -> None:

@@ -69,7 +69,7 @@ def chunk_node(state: RagIngestState) -> RagIngestState:
             "chunk_id": str(uuid.uuid4()),
             "content": clean_chunk_text(chunk_text),
             "context": None,
-            "contexulized_chunk": None,
+            "contextualized_chunk": None,
             "embedding": None,
             "breadcrumbs": None,
             "page_number": page_number,
