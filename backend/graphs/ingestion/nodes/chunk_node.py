@@ -12,6 +12,16 @@ def get_dynamic_chunk_size(text_length: int) -> int:
     return min(ideal_chunk_size, config.max_chunk_size)
 
 
+def clean_chunk_text(text: str) -> str:
+    """Clean chunk by removing extra whitespace while preserving structure."""
+    # Remove spaces after/before newlines
+    text = text.replace('\n ', '\n').replace(' \n', '\n')
+    # Strip each line and remove empty lines
+    text = '\n'.join(line.strip() for line in text.split('\n'))
+    text = '\n'.join(line for line in text.split('\n') if line.strip())
+    return text.strip()
+
+
 def chunk_node(state: RagIngestState) -> RagIngestState:
     """Processes raw text or documents into smaller, manageable chunks."""
     raw_text = state["raw_text"]
@@ -49,14 +59,15 @@ def chunk_node(state: RagIngestState) -> RagIngestState:
         page_number = None
         if len(page_info) > 1:
             text_fraction = current_pos / len(merged_text)
-            page_number = min(int(text_fraction * len(page_info)), len(page_info) - 1)
+            page_index = min(int(text_fraction * len(page_info)), len(page_info) - 1)
+            page_number = page_info[page_index]
         elif len(page_info) == 1:
             page_number = page_info[0]
         
         # Create chunk data
         chunk_data: ChunkData = {
             "chunk_id": str(uuid.uuid4()),
-            "content": chunk_text,
+            "content": clean_chunk_text(chunk_text),
             "context": None,
             "contexulized_chunk": None,
             "embedding": None,
