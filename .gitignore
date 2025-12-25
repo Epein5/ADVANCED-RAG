@@ -1,3 +1,4 @@
 .env
 Dockerfile
 /dummy_data/
+__pycache__/
