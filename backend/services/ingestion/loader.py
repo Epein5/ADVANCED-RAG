@@ -1,10 +1,15 @@
 from fastapi import UploadFile
 import PyPDF2
 
+from backend.utils.decorators import track_execution_time
+
+
 class DocumentLoaderService:
     '''
     Takes different kinds of document and then returns in simple text format.
     '''
+    
+    @track_execution_time
     def load(self, file: UploadFile | None = None, text: str | None = None):
         if file:
             filename = file.filename or ""

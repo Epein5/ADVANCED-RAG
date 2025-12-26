@@ -3,6 +3,8 @@ from typing import List
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from backend.graphs.ingestion.state import RagIngestState, ChunkData
 from backend.core.config import config
+from backend.utils.decorators import track_execution_time
+
 
 
 def get_dynamic_chunk_size(text_length: int) -> int:
@@ -21,7 +23,7 @@ def clean_chunk_text(text: str) -> str:
     text = '\n'.join(line for line in text.split('\n') if line.strip())
     return text.strip()
 
-
+@track_execution_time
 def chunk_node(state: RagIngestState) -> RagIngestState:
     """Processes raw text or documents into smaller, manageable chunks."""
     raw_text = state["raw_text"]

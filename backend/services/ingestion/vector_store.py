@@ -5,6 +5,7 @@ from typing import Optional
 from backend.core.config import config
 from backend.core.db.weaviate_client import get_weaviate_client
 from backend.graphs.ingestion.state import RagIngestState
+from backend.utils.decorators import track_execution_time
 
 
 class VectorStoreService:
@@ -20,7 +21,6 @@ class VectorStoreService:
         
         self.client.collections.create(
             name=self.collection_name,
-            vector_config=Configure.Vectorizer.none(),
             properties=[
                 Property(name="chunk_id", data_type=DataType.TEXT),
                 Property(name="content", data_type=DataType.TEXT),
@@ -34,7 +34,8 @@ class VectorStoreService:
                 Property(name="document_name", data_type=DataType.TEXT),
             ]
         )
-    
+
+    @track_execution_time
     def store_embeddings(self, state: RagIngestState) -> str:
         if not state.get("chunks"):
             raise ValueError("No chunks to store")

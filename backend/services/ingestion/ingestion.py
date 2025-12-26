@@ -1,3 +1,4 @@
+from backend.utils.decorators import track_execution_time
 import time
 import uuid
 
@@ -13,6 +14,7 @@ class DocumentIngestionService:
         self.graph = graph
         self.vector_store = vector_store
         
+    @track_execution_time
     def ingest_document(self, file=None, text=None):
         start_time = time.time()
         try:

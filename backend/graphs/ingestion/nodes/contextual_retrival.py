@@ -6,6 +6,8 @@ from backend.core.config import config
 import asyncio
 import warnings
 
+from backend.utils.decorators import track_execution_time
+
 # Suppress aiohttp's unclosed transport warnings (known issue with google-genai async client)
 warnings.filterwarnings("ignore", category=ResourceWarning, message="unclosed transport")
 
@@ -51,7 +53,7 @@ def _delete_cache_safely(client: genai.Client, cache_name: str) -> None:
     except Exception as e:
         print(f"Error deleting cache: {e}")
 
-
+@track_execution_time
 def contextual_retrival_node(state: RagIngestState) -> RagIngestState:
     """
     Applies Contextual Retrieval techniques to enhance chunk relevance and context.

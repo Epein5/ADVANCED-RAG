@@ -1,6 +1,8 @@
 from openai import AzureOpenAI
 from backend.graphs.ingestion.state import RagIngestState
 from backend.core.config import config
+from backend.utils.decorators import track_execution_time
+
 
 
 def get_embedding_client() -> AzureOpenAI:
@@ -26,7 +28,7 @@ def generate_embeddings(texts: list[str], batch_size: int = 20) -> list[list[flo
     
     return all_embeddings
 
-
+@track_execution_time
 def embedd(state: RagIngestState) -> RagIngestState:
     chunks = state["chunks"]
     
