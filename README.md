@@ -1,5 +1,38 @@
 # Notebook Explanations
 
+---
+
+# Backend Explanation
+
+## Architecture
+FastAPI backend with LangGraph for orchestrating the ingestion pipeline.
+
+## Ingestion Flow
+`POST /api/v1/ingestion/ingest` → Uploads PDF and processes it through:
+
+1. **Load** → Parse PDF using `PyMuPDF4LLM` (Markdown extraction)
+2. **Chunk** → Split into chunks (max 1500 chars) using `RecursiveCharacterTextSplitter`
+3. **Contextual Retrieval** → Use Google Gemini with caching to generate context for each chunk
+4. **Embed** → Generate vectors using Azure OpenAI `text-embedding-3-large`
+5. **Store** → Save to Weaviate vector database
+
+## Key Components
+| Component | Purpose |
+|-----------|---------|
+| `backend/main.py` | FastAPI app entry |
+| `backend/api/v1/ingestion.py` | Ingestion endpoint |
+| `backend/graphs/ingestion/graph.py` | LangGraph pipeline |
+| `backend/graphs/ingestion/nodes/` | Individual processing nodes |
+| `backend/services/ingestion/` | Loader, VectorStore services |
+| `backend/core/db/weaviate_client.py` | Weaviate connection manager |
+
+## External Services
+- **Weaviate** (Docker) → Vector DB
+- **Google Gemini** → Context generation with caching
+- **Azure OpenAI** → Embeddings
+
+---
+
 ## Overview
 This is a RAG (Retrieval Augmented Generation) system for the Nepal Constitution document. There are 2 main notebooks:
 

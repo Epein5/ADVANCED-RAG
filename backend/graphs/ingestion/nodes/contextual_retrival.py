@@ -4,6 +4,10 @@ from google.genai import types
 from pydantic import BaseModel, Field
 from backend.core.config import config
 import asyncio
+import warnings
+
+# Suppress aiohttp's unclosed transport warnings (known issue with google-genai async client)
+warnings.filterwarnings("ignore", category=ResourceWarning, message="unclosed transport")
 
 class ChunkResponse(BaseModel):
     context: str = Field(description="Concise context explaining where this chunk sits within the document.")
@@ -54,7 +58,7 @@ def contextual_retrival_node(state: RagIngestState) -> RagIngestState:
     Also gathers metadata.
     """
     client = genai.Client(api_key=config.google_api_key)
-    async_client = genai.Client(api_key=config.google_api_key)
+    async_client = genai.Client(api_key=config.google_api_key, http_options=types.HttpOptions(api_version="v1beta"))
     print("Starting contextual retrieval node...")
     
     document_content = "\n\n".join([c['content'] for c in state['chunks']])
@@ -95,7 +99,10 @@ def contextual_retrival_node(state: RagIngestState) -> RagIngestState:
         async def process_all_chunks() -> list:
             semaphore = asyncio.Semaphore(10)
             tasks = [process_chunk(semaphore, chunk, i) for i, chunk in enumerate(state['chunks'])]
-            return await asyncio.gather(*tasks)
+            results = await asyncio.gather(*tasks)
+            # Allow pending async tasks to complete and connections to close
+            await asyncio.sleep(0.1)
+            return results
 
         results = asyncio.run(process_all_chunks())
         
