@@ -24,6 +24,9 @@ class Config(BaseSettings):
     weaviate_port: int = 8080
     weaviate_collection_name: str = "Chunk"
 
+    # Contextual retrieval configuration
+    contextual_retrieval_concurrency: int = 50
+
     # @property
     # def db_url(self):
     #     return f"sqlite:///./{self.db_name}"

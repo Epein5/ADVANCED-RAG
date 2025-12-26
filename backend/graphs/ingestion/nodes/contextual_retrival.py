@@ -8,8 +8,8 @@ import warnings
 
 from backend.utils.decorators import track_execution_time
 
-# Suppress aiohttp's unclosed transport warnings (known issue with google-genai async client)
-warnings.filterwarnings("ignore", category=ResourceWarning, message="unclosed transport")
+# Suppress aiohttp's unclosed socket and transport warnings (known issue with google-genai async client)
+warnings.filterwarnings("ignore", category=ResourceWarning)
 
 class ChunkResponse(BaseModel):
     context: str = Field(description="Concise context explaining where this chunk sits within the document.")
@@ -99,7 +99,7 @@ def contextual_retrival_node(state: RagIngestState) -> RagIngestState:
                         await asyncio.sleep(wait_time)
 
         async def process_all_chunks() -> list:
-            semaphore = asyncio.Semaphore(10)
+            semaphore = asyncio.Semaphore(config.contextual_retrieval_concurrency)
             tasks = [process_chunk(semaphore, chunk, i) for i, chunk in enumerate(state['chunks'])]
             results = await asyncio.gather(*tasks)
             # Allow pending async tasks to complete and connections to close

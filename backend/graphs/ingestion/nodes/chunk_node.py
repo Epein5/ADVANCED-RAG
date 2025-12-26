@@ -1,9 +1,12 @@
 import uuid
+import logging
 from typing import List
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from backend.graphs.ingestion.state import RagIngestState, ChunkData
 from backend.core.config import config
 from backend.utils.decorators import track_execution_time
+
+logger = logging.getLogger(__name__)
 
 
 
@@ -85,5 +88,20 @@ def chunk_node(state: RagIngestState) -> RagIngestState:
     # Update state
     state["chunks"] = chunks
     state["total_chunks"] = len(chunks)
+
+    # Log chunking summary
+    chunk_lengths = [len(c["content"]) for c in chunks]
+    if chunk_lengths:
+        logger.info(
+            "Chunking produced %d chunks — requested_chunk_size=%d, min=%d, max=%d, avg=%.1f",
+            len(chunk_lengths),
+            chunk_size,
+            min(chunk_lengths),
+            max(chunk_lengths),
+            sum(chunk_lengths) / len(chunk_lengths),
+        )
+        logger.debug("Per-chunk sizes: %s", chunk_lengths)
+    else:
+        logger.warning("Chunking produced 0 chunks (input length=%d)", len(merged_text))
     
     return state
