@@ -12,4 +12,9 @@ app = FastAPI(
     docs_url='/dicks',
 )
 
+@app.get("/health", tags=["health"])
+async def health_check():
+    return {"status": "ok"}
+
+
 app.include_router(ingestion_router, prefix="/api/v1/ingestion", tags=["ingestion"])
