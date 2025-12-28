@@ -1,2 +1,6 @@
-.env
 Dockerfile
+/dummy_data/
+__pycache__/
+.venv/
+notebooks/
+tests/
