@@ -33,6 +33,17 @@ FastAPI backend with LangGraph for orchestrating the ingestion pipeline.
 
 ---
 
+## RUN BACKEND CODE WITH 
+```
+uv run uvicorn backend.main:app --reload
+```
+
+### or directly run thorugh docker (preferred: as this setups redis and weviate as well )
+```
+docker compose up -d --build
+```
+
+
 ## Overview
 This is a RAG (Retrieval Augmented Generation) system for the Nepal Constitution document. There are 2 main notebooks:
 
@@ -75,3 +86,4 @@ This is a RAG (Retrieval Augmented Generation) system for the Nepal Constitution
 - Combining both = best of both worlds
 
 ---
+

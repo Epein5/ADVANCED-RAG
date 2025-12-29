@@ -1,6 +1,5 @@
 from pydantic import BaseModel
 from typing import Optional
-from typing import TypedDict, List
 
 
 class ApiIngestionResponse(BaseModel):
