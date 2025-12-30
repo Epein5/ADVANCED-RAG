@@ -4,6 +4,7 @@ from backend.services.retrival.retrival import RetrivalService
 from backend.graphs.retrival.graph import RetrivalGraph
 from backend.services.retrival.chunks_retrival import ChunksRetrivalService
 from backend.services.retrival.embedding_service import EmbeddingService
+from backend.services.retrival.reranking import RerankingService
 from backend.core.embedding_client import get_embedding_client
 from backend.core.db.weaviate_client import get_weaviate_client
 
@@ -11,7 +12,7 @@ from backend.core.db.weaviate_client import get_weaviate_client
 router = APIRouter()
 
 def get_embedding_service(client = Depends(get_embedding_client)):
-    return EmbeddingService(client=client)
+    return EmbeddingService(embedding_client=client)
 
 def get_chunks_retrival_service(
     embedding_service: EmbeddingService = Depends(get_embedding_service)
@@ -21,11 +22,19 @@ def get_chunks_retrival_service(
         embedding_service=embedding_service
     )
 
-def get_retrival_service():
-    retrival_graph = RetrivalGraph()
+def get_reranking_service():
+    return RerankingService()
+
+def get_retrival_service(
+    chunks_retrival_service: ChunksRetrivalService = Depends(get_chunks_retrival_service),
+    reranking_service: RerankingService = Depends(get_reranking_service)
+):
+    retrival_graph = RetrivalGraph(
+        retrival_methods=chunks_retrival_service,
+        reranking_service=reranking_service
+    )
     return RetrivalService(
-        graph=retrival_graph._build_graph(),
-        # chunks_retrival_service=get_chunks_retrival_service()
+        graph=retrival_graph.graph
     )
 
 @router.post("/retrival", response_model=ApiRetrivalResponse)

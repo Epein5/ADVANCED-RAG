@@ -9,25 +9,35 @@ from backend.graphs.retrival.tools.summarizer import summarizer_tool
 from backend.core.llm_client import get_llm
 
 
+
 class RetrivalGraph:
-    def __init__(self) -> None:
-        self.llm = get_llm().bind_tools([retrieve_tool, websearch_tool, summarizer_tool])
-        self.tools = [
-            websearch_tool,
-            retrieve_tool,
-            summarizer_tool,
-        ]
-        
+    def __init__(self, retrival_methods, reranking_service) -> None:
+        self.retrival_methods = retrival_methods
+        self.reranking_service = reranking_service
         self.graph = self._build_graph()
     
     def _build_graph(self):
         graph = StateGraph(RetrivalGraphState)
         
-        # Inject LLM into orchestrator using partial (Dependency Injection)
-        orchestrator_with_llm = partial(orchestrator_node, llm=self.llm)
+        # Create partial tool with retrival_methods and reranking_service injected
+        retrieve_tool_with_deps = partial(retrieve_tool, retrival_methods=self.retrival_methods, reranking_service=self.reranking_service)
         
+        # Create tools list with partial version
+        tools = [
+            websearch_tool,
+            retrieve_tool_with_deps,
+            summarizer_tool,
+        ]
+        
+        # Bind tools to LLM (with partial versions)
+        llm = get_llm().bind_tools(tools)
+        
+        # Inject LLM into orchestrator using partial (Dependency Injection)
+        orchestrator_with_llm = partial(orchestrator_node, llm=llm)
+
         graph.add_node("orchestrator", orchestrator_with_llm)
-        graph.add_node("tools", ToolNode(self.tools))
+
+        graph.add_node("tools", ToolNode(tools))
         
         graph.set_entry_point("orchestrator")
         

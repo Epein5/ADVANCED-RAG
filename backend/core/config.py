@@ -9,6 +9,7 @@ class Config(BaseSettings):
     app_name: str = "Advanced-RAG-Backend"
     google_api_key: str
     azure_openai_api_key: str
+    tavily_api_key: str
 
     azure_openai_endpoint: str = "https://grow-me82mm7z-eastus2.services.ai.azure.com"
     azure_api_version: str = "2024-12-01-preview"
