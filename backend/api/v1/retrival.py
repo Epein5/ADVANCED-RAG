@@ -7,6 +7,8 @@ from backend.services.retrival.embedding_service import EmbeddingService
 from backend.services.retrival.reranking import RerankingService
 from backend.core.embedding_client import get_embedding_client
 from backend.core.db.weaviate_client import get_weaviate_client
+import traceback
+
 
 
 router = APIRouter()
@@ -15,10 +17,11 @@ def get_embedding_service(client = Depends(get_embedding_client)):
     return EmbeddingService(embedding_client=client)
 
 def get_chunks_retrival_service(
-    embedding_service: EmbeddingService = Depends(get_embedding_service)
+    embedding_service: EmbeddingService = Depends(get_embedding_service),
+    weaviate_client = Depends(get_weaviate_client)
 ):
     return ChunksRetrivalService(
-        weaviate_client=Depends(get_weaviate_client),
+        weaviate_client=weaviate_client,
         embedding_service=embedding_service
     )
 
@@ -46,4 +49,5 @@ async def retrival_endpoint(
         response = retrival_service.retrieve(request.query, request.document_id)
         return response
     except Exception as e:
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
