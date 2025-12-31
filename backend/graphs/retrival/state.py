@@ -10,6 +10,3 @@ class RetrivalGraphState(TypedDict):
     final_response: str
     messages: Annotated[Sequence[BaseMessage],add_messages]
     tool_calls: list[dict]
-    retrieval_completed: bool
-    websearch_completed: bool
-    retrieval_results: str  # Store retrieved content for context

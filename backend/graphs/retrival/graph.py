@@ -39,15 +39,13 @@ class RetrivalGraph:
 
         graph.add_node("orchestrator", orchestrator_with_llm)
 
-        graph.add_node("tools", self._tool_node_with_state_tracking(ToolNode(tools)))
+        graph.add_node("tools", ToolNode(tools))
         
         graph.set_entry_point("orchestrator")
         
         def should_continue(state: RetrivalGraphState):
-            # Stop if no tool calls or if both steps are complete
+            # Stop if no tool calls
             if not state.get("tool_calls"):
-                return "end"
-            if state.get("retrieval_completed") and state.get("websearch_completed"):
                 return "end"
             return "tools"
         
@@ -63,25 +61,3 @@ class RetrivalGraph:
         graph.add_edge("tools", "orchestrator")
         
         return graph.compile()
-    
-    def _tool_node_with_state_tracking(self, tool_node):
-        """Wrap ToolNode to track completion flags after tool execution"""
-        def wrapped_tool_node(state: RetrivalGraphState):
-            # Execute tools
-            result = tool_node.invoke(state)
-            
-            # Track which tools were called
-            if state.get("tool_calls"):
-                for tool_call in state["tool_calls"]:
-                    if tool_call.get("name") == "retrieve_from_knowledge_base":
-                        # Check if we got results and store them
-                        result["retrieval_completed"] = True
-                        # Store the retrieved content for context
-                        if "content" in result:
-                            result["retrieval_results"] = str(result.get("content", ""))
-                    elif tool_call.get("name") == "web_search":
-                        result["websearch_completed"] = True
-            
-            return result
-        
-        return wrapped_tool_node

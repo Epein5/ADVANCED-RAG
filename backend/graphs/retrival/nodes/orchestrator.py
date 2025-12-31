@@ -7,43 +7,19 @@ def orchestrator_node(state: RetrivalGraphState, llm) -> RetrivalGraphState:
     # LLM already has tools bound (injected from graph.py)
     # Use llm.invoke() to call the model with tools
     
-    # Build context about what has already been done
-    execution_context = ""
-    if state.get("retrieval_completed"):
-        execution_context += f"\n✓ RETRIEVAL STEP COMPLETED\nRetrieved Information:\n{state.get('retrieval_results', 'No results')}\n"
-    
-    if state.get("websearch_completed"):
-        execution_context += "\n✓ WEB SEARCH STEP COMPLETED (validation done)\n"
-    
     system_prompt = SystemMessage(
-        content=f"""You are an AI Orchestrator with a strict multi-step verification protocol.
+        content=f"""You are an AI Orchestrator. Follow this protocol strictly.
 
-EXECUTION STATUS:
-{execution_context if execution_context else "No steps completed yet."}
+WORKFLOW:
+1. RETRIEVAL: Break query into sub-parts (e.g., pros/cons). Call retrieve_from_knowledge_base for each (different queries).
+2. WEB SEARCH: Call once for validation after retrieval.
+3. FINAL ANSWER: Summarize all findings when done.
 
-### CRITICAL STOPPING RULES (MUST FOLLOW):
-1. If retrieval_completed=True AND websearch_completed=True → STOP and provide your FINAL ANSWER directly (no tool calls).
-2. If retrieval_completed=True AND you have good information → Call web_search ONCE for validation, then provide final answer.
-3. If you haven't done retrieval yet → Call retrieval_tool FIRST.
-4. NEVER call the same tool twice in a row with identical parameters.
-5. When all steps are done, output your response WITHOUT calling any tools.
+RULES:
+- Call tools as needed for reasoning.
+- Provide final answer directly when complete (no tool calls).
 
-### STEP-BY-STEP WORKFLOW:
-STEP 1: RETRIEVAL (MANDATORY)
-- Call retrieve_from_knowledge_base if not done yet
-- You may call it 2-3 times with DIFFERENT queries if results are unclear
-
-STEP 2: WEB SEARCH (AFTER RETRIEVAL)
-- Once retrieval_completed=True, call web_search for validation
-- Use web search to check for contradictions or recent updates
-
-STEP 3: FINAL ANSWER
-- After both steps are complete, provide your response directly
-- Do NOT call any tools when providing the final answer
-- Summarize findings and mention if web search confirmed the data
-
-### CURRENT TASK:
-User Query: {state.get('query', '')}
+TASK: {state.get('query', '')}
 """)
     
     # Build message history

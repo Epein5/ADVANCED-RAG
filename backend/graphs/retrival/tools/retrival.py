@@ -44,7 +44,7 @@ class RetrieveTool:
                 state: Graph state containing document_id and retrieval history.
 
             Returns:
-                List[dict]: Retrieved chunks with breadcrumbs, contextualized text,
+                List[dict]: Retrieved chunks with breadcrumb, contextualized text,
                 page/line metadata, and reranking scores.
             """
             print("Retrieve Tool Invoked with query:", query)
@@ -77,7 +77,7 @@ class RetrieveTool:
             # --- Formatting Output ---
             filtered_results = [
                 {
-                    "breadcrumbs": chunk.get("breadcrumbs", []),
+                    "breadcrumbs": chunk.get("breadcrumbs", ""),
                     "contextualized_chunk": chunk.get("contextualized_chunk", ""),
                     "line_number": chunk.get("line_number"),
                     "page_number": chunk.get("page_number"),
