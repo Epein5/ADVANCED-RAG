@@ -1,5 +1,6 @@
 import uuid
 import logging
+import re
 from typing import List
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from backend.graphs.ingestion.state import RagIngestState, ChunkData
@@ -18,78 +19,80 @@ def get_dynamic_chunk_size(text_length: int) -> int:
 
 
 def clean_chunk_text(text: str) -> str:
-    """Clean chunk by removing extra whitespace while preserving structure."""
-    # Remove spaces after/before newlines
-    text = text.replace('\n ', '\n').replace(' \n', '\n')
-    # Strip each line and remove empty lines
-    text = '\n'.join(line.strip() for line in text.split('\n'))
-    text = '\n'.join(line for line in text.split('\n') if line.strip())
+    """Clean chunk by removing extra whitespace while preserving paragraph structure."""
+    # Replace multiple spaces with single spaces
+    text = re.sub(r' +', ' ', text)
+    # Remove excessive newlines but preserve paragraph breaks (double newlines)
+    text = re.sub(r'\n\s*\n\s*\n+', '\n\n', text)  # Collapse multiple newlines to double
+    # Clean up spaces around newlines
+    text = re.sub(r'\s*\n\s*', '\n', text)
     return text.strip()
 
-@track_execution_time
-def chunk_node(state: RagIngestState) -> RagIngestState:
-    """Processes raw text or documents into smaller, manageable chunks."""
-    raw_text = state["raw_text"]
-    
-    # Extract and merge text from list of dicts
+
+def merge_raw_text(raw_text) -> tuple[str, dict]:
+    """Merge raw text from list of dicts or return as string."""
     if isinstance(raw_text, list):
-        merged_text = "\n".join([item.get("text", "") for item in raw_text])
-        page_info = {i: item.get("page") for i, item in enumerate(raw_text)}
+        merged_text_parts = []
+        page_info = {}
+        
+        for i, item in enumerate(raw_text):
+            text = item.get("text", "")
+            page_num = item.get("page")
+            
+            merged_text_parts.append(text)
+            page_info[i] = page_num
+        
+        merged_text = "\n".join(merged_text_parts)
+        return merged_text, page_info
     else:
         merged_text = raw_text
         page_info = {0: None}
+        return merged_text, page_info
+
+
+def create_chunk_data(chunk_text: str, merged_text: str, page_info: dict, raw_text: list, current_pos: int) -> ChunkData:
+    """Create a ChunkData object for a given chunk."""
+    # Find which input item this chunk belongs to
+    item_index = 0
+    cumulative_pos = 0
     
-    # Get dynamic chunk size based on text length (characters)
-    chunk_size = get_dynamic_chunk_size(len(merged_text))
+    for i, item in enumerate(raw_text):
+        item_length = len(item.get("text", "")) + 1  # +1 for \n
+        if current_pos < cumulative_pos + item_length:
+            item_index = i
+            break
+        cumulative_pos += item_length
     
-    # Initialize splitter with no overlap
+    # Get page and line info from the original item
+    item = raw_text[item_index] if item_index < len(raw_text) else {}
+    page_number = item.get("page")
+    line_number = item.get("line_number")  # Only set for text files, None for PDFs
+    
+    return {
+        "chunk_id": str(uuid.uuid4()),
+        "content": clean_chunk_text(chunk_text),
+        "context": None,
+        "contextualized_chunk": None,
+        "embedding": None,
+        "breadcrumbs": None,
+        "page_number": page_number,
+        "line_number": line_number,
+        "chunk_type": None
+    }
+
+
+def split_text_into_chunks(merged_text: str, chunk_size: int) -> list[str]:
+    """Split merged text into chunks using RecursiveCharacterTextSplitter."""
     splitter = RecursiveCharacterTextSplitter(
         chunk_size=chunk_size,
         chunk_overlap=0,
         separators=["\n\n", "\n", ". ", " ", ""]
     )
-    
-    # Split text into chunks
-    split_chunks = splitter.split_text(merged_text)
-    
-    # Generate ChunkData objects
-    chunks: List[ChunkData] = []
-    current_pos = 0
-    
-    for chunk_text in split_chunks:
-        # Calculate line number (count newlines from start to current position)
-        line_number = merged_text[:current_pos].count('\n') + 1
-        
-        # Determine page number (approximate based on position in document)
-        page_number = None
-        if len(page_info) > 1:
-            text_fraction = current_pos / len(merged_text)
-            page_index = min(int(text_fraction * len(page_info)), len(page_info) - 1)
-            page_number = page_info[page_index]
-        elif len(page_info) == 1:
-            page_number = page_info[0]
-        
-        # Create chunk data
-        chunk_data: ChunkData = {
-            "chunk_id": str(uuid.uuid4()),
-            "content": clean_chunk_text(chunk_text),
-            "context": None,
-            "contextualized_chunk": None,
-            "embedding": None,
-            "breadcrumbs": None,
-            "page_number": page_number,
-            "line_number": line_number,
-            "chunk_type": None
-        }
-        
-        chunks.append(chunk_data)
-        current_pos += len(chunk_text)
-    
-    # Update state
-    state["chunks"] = chunks
-    state["total_chunks"] = len(chunks)
+    return splitter.split_text(merged_text)
 
-    # Log chunking summary
+
+def log_chunking_summary(chunks: List[ChunkData], chunk_size: int, merged_text: str):
+    """Log summary of chunking process."""
     chunk_lengths = [len(c["content"]) for c in chunks]
     if chunk_lengths:
         logger.info(
@@ -103,5 +106,35 @@ def chunk_node(state: RagIngestState) -> RagIngestState:
         logger.debug("Per-chunk sizes: %s", chunk_lengths)
     else:
         logger.warning("Chunking produced 0 chunks (input length=%d)", len(merged_text))
+
+@track_execution_time
+def chunk_node(state: RagIngestState) -> RagIngestState:
+    """Processes raw text or documents into smaller, manageable chunks."""
+    raw_text = state["raw_text"]
+    
+    # Merge raw text and extract page info
+    merged_text, page_info = merge_raw_text(raw_text)
+    
+    # Get dynamic chunk size
+    chunk_size = get_dynamic_chunk_size(len(merged_text))
+    
+    # Split text into chunks
+    split_chunks = split_text_into_chunks(merged_text, chunk_size)
+    
+    # Generate ChunkData objects
+    chunks: List[ChunkData] = []
+    current_pos = 0
+    
+    for chunk_text in split_chunks:
+        chunk_data = create_chunk_data(chunk_text, merged_text, page_info, raw_text, current_pos)
+        chunks.append(chunk_data)
+        current_pos += len(chunk_text)
+    
+    # Update state
+    state["chunks"] = chunks
+    state["total_chunks"] = len(chunks)
+    
+    # Log chunking summary
+    log_chunking_summary(chunks, chunk_size, merged_text)
     
     return state

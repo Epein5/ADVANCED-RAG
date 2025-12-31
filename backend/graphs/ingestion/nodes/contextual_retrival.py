@@ -14,21 +14,18 @@ warnings.filterwarnings("ignore", category=ResourceWarning)
 class ChunkResponse(BaseModel):
     context: str = Field(description="Concise context explaining where this chunk sits within the document.")
     chunk_type: str = Field(description="Classification or type of the chunk (e.g., 'section', 'definition').")
-    breadcrumb: str = Field(description="Hierarchical path or breadcrumb showing chunk location in document structure.")
+    breadcrumb: str = Field(description="Hierarchical path or breadcrumb showing chunk location in document structure.(e.g., 'Chapter 1 > Section 2').")
 
 
 def _build_chunk_prompt(chunk_content: str) -> str:
     """Build the prompt for contextual retrieval."""
     return f"""
-    Here is a specific chunk from the document provided in the context:
+    Here is the chunk we want to situate within the whole document
     <chunk>
     {chunk_content}
     </chunk>
 
-    Generate retrieval context for this chunk. The context should:
-    - Be 2-3 sentences that situate this chunk within the document
-    - Include key terms/topics from surrounding sections
-    - Explain the chunk's purpose or what question it answers
+    Please give a short succinct context to situate this chunk within the overall document for the purposes of improving search retrieval of the chunk. Answer only with the succinct context and nothing else. 
     - Be self-contained (assume the reader only sees the chunk + your context)
     """
 
@@ -42,7 +39,7 @@ def _update_chunk_with_result(chunk: dict, result: ChunkResponse) -> None:
     """Update a chunk dict with the contextual retrieval result."""
     chunk['context'] = result.context
     chunk['chunk_type'] = result.chunk_type
-    chunk['breadcrumbs'] = [result.breadcrumb]
+    chunk['breadcrumbs'] = result.breadcrumb
     chunk['contextualized_chunk'] = f"{result.context}\n\n{chunk['content']}"
 
 

@@ -17,7 +17,7 @@ class VectorStoreService:
     
     def _ensure_schema_exists(self) -> None:
         if self.client.collections.exists(self.collection_name):
-            return
+            self.client.collections.delete(self.collection_name)
         
         self.client.collections.create(
             name=self.collection_name,
@@ -26,7 +26,7 @@ class VectorStoreService:
                 Property(name="content", data_type=DataType.TEXT),
                 Property(name="context", data_type=DataType.TEXT),
                 Property(name="contextualized_chunk", data_type=DataType.TEXT),
-                Property(name="breadcrumbs", data_type=DataType.TEXT_ARRAY),
+                Property(name="breadcrumbs", data_type=DataType.TEXT),
                 Property(name="page_number", data_type=DataType.INT),
                 Property(name="line_number", data_type=DataType.INT),
                 Property(name="chunk_type", data_type=DataType.TEXT),

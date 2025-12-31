@@ -6,7 +6,7 @@ class ChunkData(TypedDict):
     context: Optional[str] = None
     contextualized_chunk: Optional[str] = None
     embedding: Optional[List[float]]
-    breadcrumbs: Optional[List[str]] = None
+    breadcrumbs: Optional[str] = None
     page_number: Optional[int] = None
     line_number: Optional[int] = None
     chunk_type: Optional[str] = None
