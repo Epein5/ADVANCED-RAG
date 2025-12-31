@@ -1,4 +1,5 @@
 from backend.utils.decorators import track_execution_time
+from weaviate.classes.query import Filter
 
 class ChunksRetrivalService:
     '''
@@ -16,13 +17,11 @@ class ChunksRetrivalService:
         query_embedding = self.embedding_service.embedd_text(query)
         collection = self.weaviate_client.collections.get("Chunk")
         
+        where_filter = Filter.by_property("document_id").equal(document_id)
+        
         results = collection.query.near_vector(
             near_vector=query_embedding,
-            where=self.weaviate_client.collections.get("Chunk").generate.where(
-                property="document_id",
-                operator="Equal",
-                value_text=document_id
-            ),
+            filters=where_filter,
             limit=top_k
         )
         
@@ -35,19 +34,15 @@ class ChunksRetrivalService:
         '''
         collection = self.weaviate_client.collections.get("Chunk")
         
-        results = collection.query.bm25(
-            properties=["chunk_id", "content", "context", "contextualized_chunk", "breadcrumbs", "page_number", "line_number", "chunk_type", "document_id", "document_name"],
-            where=collection.generate.where(
-                property="document_id",
-                operator="Equal",
-                value_text=document_id
-            ),
-            limit=top_k,
-            search=query,
-            search_method="bm25"
-        ).objects
+        where_filter = Filter.by_property("document_id").equal(document_id)
         
-        return [obj.properties for obj in results]
+        results = collection.query.bm25(
+            query=query,
+            filters=where_filter,
+            limit=top_k
+        )
+        
+        return [obj.properties for obj in results.objects]
     
 
     @track_execution_time
@@ -65,7 +60,7 @@ class ChunksRetrivalService:
             chunk_id = obj["chunk_id"]
             score_dict[chunk_id] = score_dict.get(chunk_id, 0) + 1 / (rank + 1 + 60)
         
-        sorted_chunk_ids = sorted(score_dict.items(), key=lambda item: item[1], reverse=True)[:top_k]
+        sorted_chunk_ids = sorted(score_dict.items(), key=lambda item: item[1], reverse=True)
         top_chunk_ids = {chunk_id for chunk_id, _ in sorted_chunk_ids}
         
         combined_results = {obj["chunk_id"]: obj for obj in vector_results + bm25_results if obj["chunk_id"] in top_chunk_ids}
