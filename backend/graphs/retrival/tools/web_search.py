@@ -1,9 +1,10 @@
 from backend.graphs.retrival.state import RetrivalGraphState
 from backend.core.tavily_client import tavily_client
 from langchain_core.tools import tool
-
+from backend.utils.decorators import track_execution_time
 
 @tool
+@track_execution_time
 def websearch_tool(query: str, max_results: int = 5, search_depth: str = "advanced", topic: str = "general") -> str:
     '''
     VALIDATION TOOL: Perform web search to validate and cross-check retrieval results.
@@ -25,6 +26,7 @@ def websearch_tool(query: str, max_results: int = 5, search_depth: str = "advanc
     Returns:
         JSON with search results, summaries, and AI-generated answer from web sources.
     '''
+    
     return tavily_client.search(
         query=query,
         max_results=max_results,

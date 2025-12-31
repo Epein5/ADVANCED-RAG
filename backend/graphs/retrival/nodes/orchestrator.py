@@ -1,32 +1,61 @@
 from backend.graphs.retrival.state import RetrivalGraphState
 from backend.core.llm_client import get_llm
-from langchain.messages import SystemMessage
+from langchain.messages import SystemMessage, HumanMessage
 
 
 def orchestrator_node(state: RetrivalGraphState, llm) -> RetrivalGraphState:
     # LLM already has tools bound (injected from graph.py)
     # Use llm.invoke() to call the model with tools
-    # print("Orchestrator Node Invoked with state:", state)
+    
+    # Build context about what has already been done
+    execution_context = ""
+    if state.get("retrieval_completed"):
+        execution_context += f"\n✓ RETRIEVAL STEP COMPLETED\nRetrieved Information:\n{state.get('retrieval_results', 'No results')}\n"
+    
+    if state.get("websearch_completed"):
+        execution_context += "\n✓ WEB SEARCH STEP COMPLETED (validation done)\n"
+    
     system_prompt = SystemMessage(
-    content = """
-        You are an AI Orchestrator with a strict multi-step verification protocol.
+        content=f"""You are an AI Orchestrator with a strict multi-step verification protocol.
 
-        ### STEP 1: RETRIEVAL (MANDATORY)
-        Whenever a user asks a question, your FIRST action must ALWAYS be to use the 'retrieval_tool'. You must do this even if you think you know the answer. 
+EXECUTION STATUS:
+{execution_context if execution_context else "No steps completed yet."}
 
-        ### STEP 2: EVALUATION
-        Once you receive the results from the retrieval_tool:
-        - If the information is missing or unclear, use the 'retrieval_tool' again with a different query.
-        - If the information is sufficient, proceed to Step 3.
+### CRITICAL STOPPING RULES (MUST FOLLOW):
+1. If retrieval_completed=True AND websearch_completed=True → STOP and provide your FINAL ANSWER directly (no tool calls).
+2. If retrieval_completed=True AND you have good information → Call web_search ONCE for validation, then provide final answer.
+3. If you haven't done retrieval yet → Call retrieval_tool FIRST.
+4. NEVER call the same tool twice in a row with identical parameters.
+5. When all steps are done, output your response WITHOUT calling any tools.
 
-        ### STEP 3: WEB SEARCH (VALIDATION ONLY)
-        After you have your answer from Retrieval, you must call the 'web_search' tool to VALIDATE the facts. 
-        - Use the web search to check for any contradictions or very recent updates.
-        - Do NOT use web search as your primary source of information.
+### STEP-BY-STEP WORKFLOW:
+STEP 1: RETRIEVAL (MANDATORY)
+- Call retrieve_from_knowledge_base if not done yet
+- You may call it 2-3 times with DIFFERENT queries if results are unclear
 
-        ### STEP 4: FINAL ANSWER
-        Only after you have both Retrieval results and Web Search validation should you provide a final response to the user. Summarize the findings and mention if the web search confirmed the internal data.
-    """)
-    response = llm.invoke([system_prompt] + state["messages"])
+STEP 2: WEB SEARCH (AFTER RETRIEVAL)
+- Once retrieval_completed=True, call web_search for validation
+- Use web search to check for contradictions or recent updates
 
-    return {"messages":[response]}
+STEP 3: FINAL ANSWER
+- After both steps are complete, provide your response directly
+- Do NOT call any tools when providing the final answer
+- Summarize findings and mention if web search confirmed the data
+
+### CURRENT TASK:
+User Query: {state.get('query', '')}
+""")
+    
+    # Build message history
+    messages = [system_prompt, HumanMessage(content=state.get("query", ""))]
+    
+    # Add previous messages for context
+    if state.get("messages"):
+        messages.extend(state["messages"])
+    
+    response = llm.invoke(messages)
+    
+    return {
+        "messages": [response],
+        "tool_calls": response.tool_calls if hasattr(response, 'tool_calls') and response.tool_calls else [],
+    }
