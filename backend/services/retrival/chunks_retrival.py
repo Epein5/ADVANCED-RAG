@@ -39,7 +39,8 @@ class ChunksRetrivalService:
         results = collection.query.bm25(
             query=query,
             filters=where_filter,
-            limit=top_k
+            limit=top_k,
+            query_properties=["breadcrumbs", "content"]
         )
         
         return [obj.properties for obj in results.objects]

@@ -31,8 +31,11 @@ class RerankingService:
         if not chunks:
             return []
         
-        # Extract contextualized chunks for re-ranking
-        chunk_texts = [chunk.get('contextualized_chunk', chunk.get('content', '')) for chunk in chunks]
+        # Extract breadcrumbs + contextualized chunks for re-ranking
+        chunk_texts = [
+            f"{chunk.get('breadcrumbs', '')} {chunk.get('contextualized_chunk', chunk.get('content', ''))}".strip()
+            for chunk in chunks
+        ]
         
         # Create pairs for cross-encoder
         pairs = [[query, text] for text in chunk_texts]

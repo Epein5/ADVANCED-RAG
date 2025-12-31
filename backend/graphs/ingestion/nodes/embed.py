@@ -32,9 +32,9 @@ def generate_embeddings(texts: list[str], batch_size: int = 20) -> list[list[flo
 def embedd(state: RagIngestState) -> RagIngestState:
     chunks = state["chunks"]
     
-    # Use contextualized chunk if available, otherwise use content
+    # Use breadcrumbs + context + content for embedding
     texts = [
-        chunk.get("contextualized_chunk") or chunk.get("content", "")
+        f"{chunk.get('breadcrumbs', '')} {chunk.get('context', '')} {chunk.get('content', '')}".strip()
         for chunk in chunks
     ]
     
