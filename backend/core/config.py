@@ -28,6 +28,15 @@ class Config(BaseSettings):
     # Contextual retrieval configuration
     contextual_retrieval_concurrency: int = 50
 
+    # Redis configuration
+    redis_host: str = "localhost"
+    redis_port: int = 6379
+    redis_db: int = 0
+
+    # Conversation history configuration
+    conversation_ttl_seconds: int = 604800  # 7 days
+    max_conversation_history: int = 20      # Load last 20 messages
+
     # @property
     # def db_url(self):
     #     return f"sqlite:///./{self.db_name}"
