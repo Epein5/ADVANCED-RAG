@@ -7,6 +7,7 @@ class RetrivalGraphState(TypedDict):
     document_id: str
     loop_count: int
     retrived_chunks: list[dict]
+    web_results: list[dict]
     final_response: str
     messages: Annotated[Sequence[BaseMessage],add_messages]
     tool_calls: list[dict]
