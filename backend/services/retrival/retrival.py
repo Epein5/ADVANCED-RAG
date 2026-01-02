@@ -52,10 +52,14 @@ class RetrivalService:
         '''
         Given a query and document_id, retrieve final answers from vector store
         and return the response from the retrival graph.
-        Includes conversation history if provided.
+        Includes conversation history if provided (only human + ai messages, no tool messages).
         '''
-        # Build input messages: history + current query
-        messages = list(conversation_history) if conversation_history else []
+        # Build input messages: history + current query (exclude tool messages)
+        messages = []
+        if conversation_history:
+            # Only include human and ai messages, skip tool messages
+            messages.extend([msg for msg in conversation_history if msg.get("role") in ["human", "ai"]])
+        
         messages.append(self._create_message_dict("human", query))
         
         graph_output = self.graph.invoke({
@@ -89,11 +93,12 @@ class RetrivalService:
             if msg.type == "ai" and getattr(msg, 'tool_calls', None)
         ]
         
-        # Build conversation messages (history + new from graph)
+        # Build conversation messages (only human + ai, skip tool messages)
         conversation_messages = list(messages) if messages else []
         conversation_messages.extend([
             self._create_message_dict(msg.type, self._extract_text_content(msg.content), getattr(msg, 'tool_calls', None))
             for msg in graph_messages
+            if msg.type in ["human", "ai"]  # Only save human and ai messages
         ])
         
         return {
