@@ -34,7 +34,7 @@ class Config(BaseSettings):
     redis_db: int = 0
 
     # Conversation history configuration
-    conversation_ttl_seconds: int = 604800  # 7 days
+    conversation_ttl_seconds: int = 1800  # 30 minutes
     max_conversation_history: int = 20      # Load last 20 messages
 
     # @property
